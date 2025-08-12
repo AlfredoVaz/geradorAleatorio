@@ -4,61 +4,56 @@ import com.geradorAleatorio.dto.RandomActivityDto;
 import com.geradorAleatorio.model.RandomActivity;
 import com.geradorAleatorio.repository.RandomActivityJpaRepository;
 import com.geradorAleatorio.repository.RandomActivityRepository;
+import com.geradorAleatorio.converter.RandomActivityConverter;
+import com.geradorAleatorio.exception.ResourceNotFoundException;
+import org.springframework.util.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 @Service
 public class RandomActivityServiceImpl implements RandomActivityService {
 
     private final RandomActivityRepository randomActivityRepository;
-
     private final RandomActivityJpaRepository jpaRepository;
+    private final RandomActivityConverter converter;
 
     public RandomActivityServiceImpl(RandomActivityRepository randomActivityRepository,
-                           RandomActivityJpaRepository jpaRepository) {
+                           RandomActivityJpaRepository jpaRepository,
+                           RandomActivityConverter converter) {
         this.randomActivityRepository = randomActivityRepository;
         this.jpaRepository = jpaRepository;
+        this.converter = converter;
     }
 
     @Transactional
     public RandomActivityDto getRandomActivity() {
-        RandomActivityDto activityResponse = randomActivityRepository.getRandomActivity();
-        if (activityResponse == null) {
-            return null;
-        }
-
-        return saveActivity(activityResponse);
+        return saveActivity(randomActivityRepository.getRandomActivity());
     }
 
     private RandomActivityDto saveActivity(RandomActivityDto activityResponse) {
-        String activity = emptyToNull(activityResponse.getActivity());
-        String type = emptyToNull(activityResponse.getType());
-        String accessibility = emptyToNull(activityResponse.getAccessibility());
-        String duration = emptyToNull(activityResponse.getDuration());
-        String link = emptyToNull(activityResponse.getLink());
-        String key = emptyToNull(activityResponse.getKey());
 
-        if (key != null && !jpaRepository.existsByKey(key)) {
-            RandomActivity entity = RandomActivity.builder()
-                    .activity(activity)
-                    .availability(activityResponse.getAvailability())
-                    .type(type)
-                    .participants(activityResponse.getParticipants())
-                    .price(activityResponse.getPrice())
-                    .accessibility(accessibility)
-                    .duration(duration)
-                    .kidFriendly(activityResponse.isKidFriendly())
-                    .link(link)
-                    .key(key)
-                    .build();
+        RandomActivity entity = converter.toEntity(activityResponse);
+        String activityKey = entity.getKey();
+        if (StringUtils.hasText(activityKey) && !jpaRepository.existsByKey(activityKey)) {
             jpaRepository.save(entity);
         }
 
         return activityResponse;
     }
+    
+    public List<RandomActivityDto> listActivities() {
+        return jpaRepository.findAll().stream()
+                .map(converter::toDto)
+                .toList();
+    }
 
-    private String emptyToNull(String value) {
-        return (value == null || value.trim().isEmpty()) ? null : value.trim();
+    public RandomActivityDto findActivityByKey(String key) {
+        RandomActivity entity = jpaRepository.findByKey(key);
+        if (entity == null) {
+            throw new ResourceNotFoundException("Activity not found for key: " + key);
+        }
+        return converter.toDto(entity);
     }
 }
 

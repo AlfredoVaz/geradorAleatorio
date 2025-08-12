@@ -9,6 +9,8 @@ public interface RandomActivityJpaRepository extends JpaRepository<RandomActivit
 
     @Query(value = "SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END FROM ACTIVITY WHERE ACTIVITY_KEY = :key", nativeQuery = true)
     boolean existsByKey(@Param("key") String key);
+
+    RandomActivity findByKey(@Param("key") String key);
 }
 
 

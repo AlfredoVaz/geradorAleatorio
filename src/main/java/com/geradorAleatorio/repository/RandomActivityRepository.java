@@ -2,6 +2,7 @@ package com.geradorAleatorio.repository;
 
 import com.geradorAleatorio.dto.RandomActivityDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geradorAleatorio.exception.RandomActivityException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Repository;
@@ -35,9 +36,9 @@ public class RandomActivityRepository {
                 ObjectMapper mapper = new ObjectMapper();
                 return mapper.readValue(response.body(), RandomActivityDto.class);
             }
-            return null;
+            throw new RandomActivityException("Não foi possível consultar uma nova atividade. Status: " + response.statusCode());
         } catch (Exception e) {
-            return null;
+            throw new RandomActivityException("Falha ao consultar a API externa", e);
         }
     }
 }
